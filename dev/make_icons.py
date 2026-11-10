@@ -21,6 +21,10 @@ SPARKLES = [
     [(12.5, 9.25), (13.1, 10.65), (14.5, 11.25), (13.1, 11.85), (12.5, 13.25), (11.9, 11.85), (10.5, 11.25), (11.9, 10.65)],
 ]
 GLYPH_CENTER = (8.375, 7.25)
+MAIN = (BARS, SPARKLES, GLYPH_CENTER)
+# Shortcut glyphs (long-press menu): a play triangle and a plus.
+PLAY = ([], [[(5, 2.5), (14, 8), (5, 13.5)]], (8.75, 8))
+PLUS = ([(6.75, 2, 9.25, 14), (2, 6.75, 14, 9.25)], [], (8, 8))
 
 
 def inside_polygon(x, y, poly):
@@ -35,18 +39,19 @@ def inside_polygon(x, y, poly):
     return inside
 
 
-def glyph_mask(x, y, cx, cy, scale):
-    gx = (x - cx) / scale + GLYPH_CENTER[0]
-    gy = (y - cy) / scale + GLYPH_CENTER[1]
+def glyph_mask(x, y, cx, cy, scale, glyph=MAIN):
+    bars, polys, center = glyph
+    gx = (x - cx) / scale + center[0]
+    gy = (y - cy) / scale + center[1]
     m = np.zeros(x.shape, bool)
-    for x0, y0, x1, y1 in BARS:
+    for x0, y0, x1, y1 in bars:
         m |= (gx >= x0) & (gx <= x1) & (gy >= y0) & (gy <= y1)
-    for poly in SPARKLES:
+    for poly in polys:
         m |= inside_polygon(gx, gy, poly)
     return m
 
 
-def render(size, maskable):
+def render(size, maskable, glyph=MAIN):
     ss = 4
     n = size * ss
     coords = (np.arange(n) + 0.5) / ss
@@ -57,7 +62,7 @@ def render(size, maskable):
     if maskable:
         # Full-bleed green; the glyph stays inside the central safe circle.
         rgb[:] = GREEN
-        glyph = glyph_mask(x, y, c, c, size * 0.50 / 16)
+        mask = glyph_mask(x, y, c, c, size * 0.50 / 16, glyph)
     else:
         r = size * 0.22  # rounded square
         dx = np.maximum(np.abs(x - c) - (c - r), 0)
@@ -67,8 +72,8 @@ def render(size, maskable):
         rgb[:] = BG
         circle = (x - c) ** 2 + (y - c) ** 2 <= (size * 0.39) ** 2
         rgb[circle] = GREEN
-        glyph = glyph_mask(x, y, c, c, size * 0.45 / 16)
-    rgb[glyph] = BLACK
+        mask = glyph_mask(x, y, c, c, size * 0.45 / 16, glyph)
+    rgb[mask] = BLACK
     # average each ss x ss block
     rgb = rgb.reshape(size, ss, size, ss, 3).mean(axis=(1, 3))
     alpha = alpha.reshape(size, ss, size, ss).mean(axis=(1, 3))
@@ -93,4 +98,7 @@ if __name__ == "__main__":
     write_png(OUT / "icon-192.png", render(192, False))
     write_png(OUT / "icon-512.png", render(512, False))
     write_png(OUT / "icon-maskable-512.png", render(512, True))
+    for name, glyph in (("play", PLAY), ("add", PLUS)):
+        write_png(OUT / f"shortcut-{name}-192.png", render(192, False, glyph))
+        write_png(OUT / f"shortcut-{name}-maskable-192.png", render(192, True, glyph))
     print("icons written to", OUT)

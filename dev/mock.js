@@ -156,6 +156,15 @@ window.fetch = async (input, init) => {
   if (u.host === "api.spotify.com") return spotify(u, init);
   if (u.host === "accounts.spotify.com")
     return json({ access_token: "mock-access", refresh_token: "mock-refresh", expires_in: 3600, scope: "mock" });
+  // Short share links: a code with "fail" in it acts like a phone, where the link leads on to the
+  // Spotify app and fetch gives up. Any other code leads to tracks[3].
+  if (u.host === "spotify.link" || u.host === "spotify.app.link") {
+    if (/fail/.test(u.pathname)) throw new TypeError("Failed to fetch");
+    return new Response(`<html><a href="https://open.spotify.com/track/${tracks[3].id}?si=x">open</a></html>`, {
+      status: 200,
+      headers: { "Content-Type": "text/html" },
+    });
+  }
   return realFetch(input, init);
 };
 
