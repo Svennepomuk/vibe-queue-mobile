@@ -73,12 +73,24 @@ export function interleave(lists, key = (t) => t.uri) {
   return out;
 }
 
-// A pasted song link or URI -> the track id.
+// A Spotify link or URI anywhere in a text -> { kind, id }, kind being track, album, artist, playlist...
+export function findSpotifyLink(text) {
+  const m = String(text || "").match(
+    /(?:spotify:|open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:embed\/)?)(track|album|artist|playlist|episode|show)[:/]([A-Za-z0-9]{22})/
+  );
+  return m ? { kind: m[1], id: m[2] } : null;
+}
+
+// Spotify's short share links (spotify.link/..., spotify.app.link/...).
+export function findShortLink(text) {
+  const m = String(text || "").match(/https?:\/\/spotify\.(?:app\.)?link\/[A-Za-z0-9_-]+(?:\?[^\s]*)?/);
+  return m ? m[0] : null;
+}
+
+// A pasted or shared song link -> the track id.
 export function linkToId(text) {
-  const m = String(text)
-    .trim()
-    .match(/^(?:spotify:track:|https?:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/)([A-Za-z0-9]{22})/);
-  return m ? m[1] : null;
+  const link = findSpotifyLink(text);
+  return link?.kind === "track" ? link.id : null;
 }
 
 export const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;

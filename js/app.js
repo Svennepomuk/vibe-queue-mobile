@@ -3,7 +3,7 @@
 import * as auth from "./auth.js";
 import * as sp from "./spotify.js";
 import * as mix from "./mix.js";
-import { linkToId, plural } from "./util.js";
+import { findShortLink, findSpotifyLink, plural } from "./util.js";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -175,7 +175,31 @@ function message(box, text) {
   box.append(d);
 }
 
-// Search as you type (after a pause) or on Enter. Pasting a song link looks that song up.
+// Spotify's short links (spotify.link/...) lead to the real song link. On a phone they lead on to the
+// Spotify app instead, which a page can't follow, so this often comes back empty there.
+async function resolveShortLink(url) {
+  try {
+    const res = await fetch(url, { credentials: "omit" });
+    return findSpotifyLink(res.url) || findSpotifyLink(await res.text());
+  } catch {
+    return null;
+  }
+}
+
+const NOT_A_SONG = "That's not a song. Albums, artists and playlists don't work here.";
+
+// Typed words search Spotify. A pasted song link, long or short, looks that song up.
+async function lookUp(q) {
+  let link = findSpotifyLink(q);
+  const short = !link && findShortLink(q);
+  if (short && !(link = await resolveShortLink(short)))
+    throw new Error("Short spotify.link links don't open here. Share the song to Vibe Queue instead.");
+  if (link && link.kind !== "track") throw new Error(NOT_A_SONG);
+  if (link) return [await sp.getTrack(link.id)].filter(Boolean);
+  return q.length >= 2 ? mix.searchSongs(q) : [];
+}
+
+// Search as you type (after a pause) or on Enter.
 function liveSearch(input, onResults) {
   let token = 0;
   let timer = 0;
@@ -188,8 +212,7 @@ function liveSearch(input, onResults) {
       let res = null;
       let err = null;
       try {
-        const id = linkToId(q);
-        res = id ? [await sp.getTrack(id)].filter(Boolean) : q.length >= 2 ? await mix.searchSongs(q) : [];
+        res = await lookUp(q);
       } catch (e) {
         err = e;
       }
@@ -224,20 +247,23 @@ function renderSeed() {
   updateButtons();
 }
 
-let nowLoading = false;
-async function refreshNow() {
-  if (nowLoading || document.hidden || !auth.isLoggedIn()) return;
-  nowLoading = true;
-  try {
-    const st = await sp.getPlayer();
-    nowTrack = sp.toTrack(st?.item);
-    nowDevice = st?.device?.name || "";
-  } catch (e) {
-    if (e instanceof auth.AuthError) showError(e);
-  } finally {
-    nowLoading = false;
-  }
-  renderSeed();
+// One look at the player at a time; callers that come in meanwhile wait for the same answer.
+let nowPromise = null;
+function refreshNow() {
+  if (document.hidden || !auth.isLoggedIn()) return Promise.resolve();
+  nowPromise ||= (async () => {
+    try {
+      const st = await sp.getPlayer();
+      nowTrack = sp.toTrack(st?.item);
+      nowDevice = st?.device?.name || "";
+    } catch (e) {
+      if (e instanceof auth.AuthError) showError(e);
+    } finally {
+      nowPromise = null;
+    }
+    renderSeed();
+  })();
+  return nowPromise;
 }
 $("[data-seed]").onclick = (e) => {
   if (e.target.closest("[data-seed-clear]")) return;
@@ -346,7 +372,7 @@ function useBlend(part) {
 liveSearch(blendInput, (q, tracks, err) => {
   blendResults.innerHTML = "";
   if (!q) return;
-  if (!linkToId(q)) {
+  if (!findSpotifyLink(q) && !findShortLink(q)) {
     const cover = coverDiv("", "cover genre-cover");
     cover.textContent = "#";
     blendResults.append(makeRow({ name: q }, "Genre", () => useBlend({ kind: "genre", genre: q.toLowerCase() }), cover));
@@ -439,6 +465,54 @@ $("[data-logout]").onclick = () => {
   showView();
 };
 
+// ------------------------------------------------------------ opened from Spotify's Share menu or a shortcut
+// Share: ?title=&text=&url= (manifest share_target). Long-press shortcuts: ?do=play-similar / add-similar.
+const LAUNCH_KEYS = ["do", "title", "text", "url"];
+function takeLaunch() {
+  const p = new URLSearchParams(location.search);
+  if (!LAUNCH_KEYS.some((k) => p.has(k))) return null;
+  const launch = {
+    act: p.get("do"),
+    shared: ["title", "text", "url"].map((k) => p.get(k) || "").join(" ").trim(),
+  };
+  LAUNCH_KEYS.forEach((k) => p.delete(k));
+  const rest = p.toString();
+  history.replaceState(null, "", location.pathname + (rest ? `?${rest}` : "") + location.hash);
+  return launch;
+}
+
+async function pickShared(text) {
+  let link = findSpotifyLink(text);
+  const short = !link && findShortLink(text);
+  if (short) link = await resolveShortLink(short);
+  if (link && link.kind !== "track") throw new Error(NOT_A_SONG);
+  if (link) {
+    const t = await sp.getTrack(link.id);
+    if (!t) throw new Error("Couldn't find that song on Spotify");
+    picked = t;
+    renderSeed();
+    return null;
+  }
+  // No link the page can read: search the shared words instead, if there are any.
+  const words = text.replace(/https?:\/\/\S+/g, " ").replace(/\s+/g, " ").trim();
+  if (words.length < 2) throw new Error("Couldn't open that link. Play the song in Spotify, then tap Play similar.");
+  const box = $("[data-song-q]");
+  box.value = words;
+  box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+  return null;
+}
+
+async function handleLaunch(launch) {
+  if (!launch || !hasKeys() || !auth.isLoggedIn()) return;
+  showTab("song");
+  if (launch.shared) return void run(() => pickShared(launch.shared));
+  if (launch.act !== "play-similar" && launch.act !== "add-similar") return;
+  picked = null;
+  await refreshNow();
+  if (!nowTrack) return toast("Play something in Spotify first", true);
+  run(launch.act === "play-similar" ? ACTIONS.playSimilar : ACTIONS.addSimilar);
+}
+
 // ------------------------------------------------------------ start
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) mix.flushCaches();
@@ -450,6 +524,7 @@ setInterval(() => {
 }, 30000);
 
 async function start() {
+  const launch = takeLaunch();
   if (location.hostname === "127.0.0.1" && new URLSearchParams(location.search).has("mock")) {
     await import("../dev/mock.js");
     window.__vqm = { mix, sp, auth };
@@ -464,6 +539,7 @@ async function start() {
     showError(e);
   }
   showView();
+  handleLaunch(launch);
   if ("serviceWorker" in navigator && !location.search.includes("mock")) navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 start();
