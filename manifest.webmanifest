@@ -14,5 +14,32 @@
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  },
+  "shortcuts": [
+    {
+      "name": "Play similar",
+      "short_name": "Play similar",
+      "description": "Plays songs similar to what's playing",
+      "url": "./?do=play-similar",
+      "icons": [
+        { "src": "icons/shortcut-play-192.png", "sizes": "192x192", "type": "image/png" },
+        { "src": "icons/shortcut-play-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
+      ]
+    },
+    {
+      "name": "Add similar",
+      "short_name": "Add similar",
+      "description": "Adds songs similar to what's playing to the queue",
+      "url": "./?do=add-similar",
+      "icons": [
+        { "src": "icons/shortcut-add-192.png", "sizes": "192x192", "type": "image/png" },
+        { "src": "icons/shortcut-add-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
+      ]
+    }
   ]
 }

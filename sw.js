@@ -1,6 +1,6 @@
 // Offline shell for the home-screen app: always tries the network first (so updates show up at once)
 // and falls back to the last copy. Spotify and Last.fm calls are never cached.
-const CACHE = "vqm-v1";
+const CACHE = "vqm-v2";
 const SHELL = [
   "./",
   "index.html",
@@ -15,6 +15,8 @@ const SHELL = [
   "icons/icon.svg",
   "icons/icon-192.png",
   "icons/icon-512.png",
+  "icons/shortcut-play-192.png",
+  "icons/shortcut-add-192.png",
 ];
 
 self.addEventListener("install", (e) => {

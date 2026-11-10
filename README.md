@@ -5,6 +5,7 @@ A web page for Spotify on your phone, because Spotify's phone app can't load ext
 ## What it does
 
 - **Song**: starts on the song playing now. You can also search a song or paste a Spotify link. *Play similar* plays that song, then only similar songs. *Add similar* adds similar songs to the end of your queue.
+- **From Spotify**: in the Spotify app, share a song and pick *Vibe Queue*. The page opens with that song picked. Long-press the Vibe Queue icon for *Play similar* or *Add similar*, which use the song playing now.
 - **Genre**: type a genre or a mood, like *phonk* or *chill*. *Play genre* plays a fresh mix and *Add genre* adds one to the queue, with at most a few songs per artist.
 - **Blend**: pick 2 or 3 songs and/or genres. *Play blend* or *Add blend* takes turns between them.
 - **Save as playlist**: saves the last mix as a new private playlist named after the mix and the date. *Play* starts a new mix and *Add* adds to it.
@@ -19,6 +20,7 @@ Everything plays on the device where Spotify is active. That's normally your pho
 
 - **Back fix**: a web page can't change what the Spotify app's Back button does.
 - **Endless vibe** and **skip memory**: both need to watch playback all the time. Android pauses web pages that aren't on screen, so they'd only work with this page open in front. The desktop extension still does both.
+- **Short links**: Spotify's *Copy link* gives `spotify.link` addresses. On a phone those lead straight into the Spotify app, so the page can't read them. Sharing the song to Vibe Queue works.
 - **New songs only** can see only your last 50 plays, not 30 days. That's the most Spotify's API gives out.
 - **Similar songs** come from Last.fm listening data, not from Spotify's song radio, because apps can't read Spotify's radio playlists anymore. Results are good for well-known songs. For brand-new or niche songs, the page falls back to top songs by similar artists.
 
@@ -72,19 +74,19 @@ To also log in from the PC for testing, add a second Redirect URI: `http://127.0
 
 1. Open the page's address in Chrome.
 2. Paste the Client ID and the Last.fm API key, then tap **Connect Spotify** and agree.
-3. In Chrome's menu (⋮), choose **Add to Home screen** (it may say *Install app*).
+3. In Chrome's menu (⋮), choose **Add to Home screen** (it may say *Install app*). Sharing from Spotify and the long-press shortcuts only work from this home-screen app. If Vibe Queue doesn't show up when you share from Spotify, remove the icon and add it again.
 4. Have the Spotify app open, and play something once so it shows up as a device.
 
 ## Privacy
 
 - Your keys, your Spotify login and the remembered songs stay in this browser's storage on the phone.
-- The page only talks to Spotify (`accounts.spotify.com`, `api.spotify.com`, and cover images from `i.scdn.co`) and Last.fm (`ws.audioscrobbler.com`). It has no analytics and loads no outside scripts or fonts.
+- The page only talks to Spotify (`accounts.spotify.com`, `api.spotify.com`, cover images from `i.scdn.co`, and `spotify.link` when you share or paste a short link) and Last.fm (`ws.audioscrobbler.com`). It has no analytics and loads no outside scripts or fonts.
 - Last.fm's API terms allow non-commercial use. They ask for a "powered by AudioScrobbler" credit, which is in Settings. They also ask that public pages using their API be approved by them in writing (clause 2.7). This is a personal tool that does nothing without your own key, but don't share the link around. If you ever want to, ask partners@last.fm first.
 
 ## Testing on the PC
 
 - `python dev/serve.py` serves the page at `http://127.0.0.1:5500/` with caching off. To log in there, add that Redirect URI (see step 2). Your phone can still be the device it plays on.
-- `http://127.0.0.1:5500/?mock` runs the whole page against fake Spotify and Last.fm (`dev/mock.js`), and nothing leaves the PC. `?mock=quota` makes search run out after 25 searches. `?mock=fresh` starts at the setup screen.
+- `http://127.0.0.1:5500/?mock` runs the whole page against fake Spotify and Last.fm (`dev/mock.js`), and nothing leaves the PC. `?mock=quota` makes search run out after 25 searches. `?mock=fresh` starts at the setup screen. Add `&text=<a song link>` to act like a share from Spotify (a `spotify.link/...fail...` link acts like a phone, where short links can't be read), or `&do=play-similar` / `&do=add-similar` to act like a long-press shortcut.
 - `python dev/make_icons.py` redraws the home-screen icons.
 
 ## Files
@@ -95,5 +97,5 @@ To also log in from the PC for testing, add a second Redirect URI: `http://127.0
 - `js/spotify.js`: Spotify Web API calls, the search counter and the quota block.
 - `js/lastfm.js`: Last.fm calls.
 - `js/auth.js`: login (Authorization Code with PKCE, no secret, no server).
-- `sw.js`, `manifest.webmanifest`, `icons/`: the home-screen app.
+- `sw.js`, `manifest.webmanifest`, `icons/`: the home-screen app, its entry in the Share menu (`share_target`) and its long-press shortcuts.
 - `dev/`: the local server, the mock and the icon script. The page loads `dev/mock.js` only on `127.0.0.1` with `?mock`.
