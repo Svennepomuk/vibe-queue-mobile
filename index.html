@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121212">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<title>Vibe Queue</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 4h8v1.5H1zM1 7.75h8v1.5H1zM1 11.5h5.5V13H1z"/><path d="M12.5 1.25l.95 2.3 2.3.95-2.3.95-.95 2.3-.95-2.3-2.3-.95 2.3-.95z"/><path d="M12.5 9.25l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z"/></svg>
+    <span>Vibe Queue</span>
+  </div>
+  <button class="icon-btn" type="button" data-open-settings aria-label="Settings" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
+  </button>
+</header>
+
+<main>
+  <section class="setup" data-view="setup" hidden>
+    <h1>Set up</h1>
+    <p class="sub">Once on this phone. Steps under How.</p>
+    <label class="field"><span>Spotify Client ID</span><input data-cfg="clientId" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text"></label>
+    <label class="field"><span>Last.fm API key</span><input data-cfg="lastfmKey" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text"></label>
+    <div class="redirect">
+      <span>Redirect URI for your Spotify app</span>
+      <div class="redirect-row"><code data-redirect></code><button class="btn small" type="button" data-copy>Copy</button></div>
+    </div>
+    <button class="btn primary wide" type="button" data-connect>Connect Spotify</button>
+    <details class="how">
+      <summary>How</summary>
+      <ol>
+        <li>On <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a>, create an app with the Redirect URI above and Web API ticked. Copy its Client ID.</li>
+        <li>On <a href="https://www.last.fm/api/account/create" target="_blank" rel="noopener">last.fm/api/account/create</a>, make an API account. Copy the API key.</li>
+        <li>Paste both here and connect.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section data-view="main" hidden>
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="song">Song</button>
+      <button type="button" role="tab" data-tab="genre">Genre</button>
+      <button type="button" role="tab" data-tab="blend">Blend</button>
+    </nav>
+
+    <div class="pane" data-pane="song" hidden>
+      <div class="seed" data-seed role="button" tabindex="0">
+        <div class="art" data-seed-art></div>
+        <div class="meta">
+          <div class="label" data-seed-label>Now playing</div>
+          <div class="title" data-seed-title>Nothing playing</div>
+          <div class="sub" data-seed-artists>Play something in Spotify or search below</div>
+        </div>
+        <button class="icon-btn x" type="button" data-seed-clear aria-label="Back to now playing" hidden>&times;</button>
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="button" data-act="playSimilar" disabled>Play similar</button>
+        <button class="btn" type="button" data-act="addSimilar" disabled>Add similar</button>
+      </div>
+      <input class="search" data-song-q type="search" placeholder="Search a song or paste a link" enterkeyhint="search" autocomplete="off" spellcheck="false">
+      <div class="results" data-song-results></div>
+    </div>
+
+    <div class="pane" data-pane="genre" hidden>
+      <input class="search" data-genre-q type="search" placeholder="Type a genre, like phonk" enterkeyhint="go" autocomplete="off" spellcheck="false">
+      <div class="chips" data-genre-chips></div>
+      <div class="actions">
+        <button class="btn primary" type="button" data-act="playGenre">Play genre</button>
+        <button class="btn" type="button" data-act="addGenre">Add genre</button>
+      </div>
+    </div>
+
+    <div class="pane" data-pane="blend" hidden>
+      <div class="slots" data-slots></div>
+      <input class="search" data-blend-q type="search" placeholder="Add a song or a genre" enterkeyhint="done" autocomplete="off" spellcheck="false">
+      <div class="results" data-blend-results></div>
+      <div class="actions">
+        <button class="btn primary" type="button" data-act="playBlend" disabled>Play blend</button>
+        <button class="btn" type="button" data-act="addBlend" disabled>Add blend</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="dock">
+  <div class="status" data-status hidden>
+    <span class="spin" aria-hidden="true"></span>
+    <span class="status-text" data-status-text>Working</span>
+    <button class="link" type="button" data-stop>Stop</button>
+  </div>
+  <div class="toast" data-toast role="status" hidden></div>
+  <div class="savebar" data-savebar hidden>
+    <div class="mix">
+      <div class="mix-name" data-mix-name></div>
+      <div class="sub" data-mix-count></div>
+    </div>
+    <button class="btn small" type="button" data-save>Save as playlist</button>
+    <a class="btn small" data-open-playlist target="_blank" rel="noopener" hidden>Open</a>
+  </div>
+</div>
+
+<dialog class="sheet" data-settings>
+  <div class="sheet-head">
+    <h2>Settings</h2>
+    <button class="icon-btn x" type="button" data-close aria-label="Close">&times;</button>
+  </div>
+  <label class="setting"><span>Songs per mix</span>
+    <select data-count><option>15</option><option>25</option><option>50</option></select>
+  </label>
+  <label class="setting"><span>New songs only<small>Skips Liked Songs and your last 50 plays</small></span>
+    <input type="checkbox" class="switch" data-new-only>
+  </label>
+  <label class="setting"><span>Versions<small>Same artist only</small></span>
+    <select data-version><option value="off">Normal</option><option value="slowed">Slowed</option><option value="spedup">Sped up</option></select>
+  </label>
+  <p class="note">Not on the phone: the Back fix, Endless vibe and skip memory. They need the desktop app.</p>
+  <p class="note" data-usage></p>
+  <details class="keys">
+    <summary>Keys</summary>
+    <label class="field"><span>Spotify Client ID</span><input data-cfg="clientId" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <label class="field"><span>Last.fm API key</span><input data-cfg="lastfmKey" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <div class="redirect">
+      <span>Redirect URI</span>
+      <div class="redirect-row"><code data-redirect></code><button class="btn small" type="button" data-copy>Copy</button></div>
+    </div>
+  </details>
+  <div class="sheet-foot">
+    <button class="btn" type="button" data-logout>Log out of Spotify</button>
+    <a class="credit" href="https://www.last.fm" target="_blank" rel="noopener">Similar songs: powered by AudioScrobbler</a>
+  </div>
+</dialog>
+</body>
+</html>
